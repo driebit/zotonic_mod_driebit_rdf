@@ -1,0 +1,11 @@
+{application, zotonic_mod_driebit_rdf, [
+    {description, "RDF support for Zotonic sites"},
+    {vsn, git},
+    {registered, []},
+    {applications, [kernel, stdlib, zotonic_core]},
+    {env, []},
+    {modules, []},
+    {maintainers, []},
+    {licenses, ["Apache 2.0"]},
+    {links, [{"GitLab", "https://gitlab.driebit.nl/driebit/zotonic_mod_driebit_rdf"}]}
+]}.
