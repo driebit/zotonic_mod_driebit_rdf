@@ -22,7 +22,8 @@
     observe_content_types_dispatch/3,
 
     rsc_to_rdf/4,
-    observe_rsc_to_rdf_graph/2
+    observe_rsc_to_rdf_graph/2,
+    observe_serialize_rdf/2
 ]).
 
 manage_schema(_, _) ->
@@ -116,3 +117,11 @@ observe_rsc_to_rdf_graph(#rsc_to_rdf_graph{rsc_id = RscId, category = Category, 
                 PropsTriples ++ EdgeTriples
             )
     end.
+
+
+observe_serialize_rdf(#serialize_rdf{rdf_graph = RdfGraph, serialization = turtle}, Context) ->
+    rdf_turtle:serialize(RdfGraph, Context);
+observe_serialize_rdf(#serialize_rdf{rdf_graph = RdfGraph, serialization = json_ld}, Context) ->
+    rdf_json_ld:serialize(RdfGraph, Context);
+observe_serialize_rdf(#serialize_rdf{}, _Context) ->
+    undefined.
