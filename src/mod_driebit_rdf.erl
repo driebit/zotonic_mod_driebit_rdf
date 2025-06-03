@@ -23,6 +23,7 @@
 
     rsc_to_rdf/4,
     observe_rsc_to_rdf_graph/2,
+    observe_triple_to_rdf/2,
     observe_serialize_rdf/2
 ]).
 
@@ -78,24 +79,41 @@ observe_rsc_to_rdf_graph(#rsc_to_rdf_graph{rsc_id = RscId, category = Category, 
                 end,
                 maps:to_list(PropsMap)
             ),
-            % TODO also do incoming edges?
-            EdgeTriples = lists:flatmap(
-                fun({PredicateName, Edges}) ->
+            OutEdgeTriples = lists:flatmap(
+                fun(PredicateName) ->
                     lists:map(
-                        fun(EdgeProps) ->
+                        fun(ObjectId) ->
                             #triple_to_rdf{
                                 rsc_id = RscId,
                                 category = Category,
                                 link_type = outgoing_edge,
                                 link_name = z_convert:to_binary(PredicateName),
-                                value = proplists:get_value(object_id, EdgeProps),
+                                value = ObjectId,
                                 ontology = Ontology
                             }
                         end,
-                        Edges
+                        m_edge:objects(RscId, PredicateName, Context)
                     )
                 end,
-                m_edge:get_edges(RscId, Context)
+                m_edge:object_predicates(RscId, Context)
+            ),
+            InEdgeTriples = lists:flatmap(
+                fun(PredicateName) ->
+                    lists:map(
+                        fun(SubjectId) ->
+                            #triple_to_rdf{
+                                rsc_id = RscId,
+                                category = Category,
+                                link_type = incoming_edge,
+                                link_name = z_convert:to_binary(PredicateName),
+                                value = SubjectId,
+                                ontology = Ontology
+                            }
+                        end,
+                        m_edge:subjects(RscId, PredicateName, Context)
+                    )
+                end,
+                m_edge:subject_predicates(RscId, Context)
             ),
             lists:foldl(
                 fun
@@ -114,10 +132,14 @@ observe_rsc_to_rdf_graph(#rsc_to_rdf_graph{rsc_id = RscId, category = Category, 
                         end
                 end,
                 {ok, sets:new()},
-                PropsTriples ++ EdgeTriples
+                PropsTriples ++ OutEdgeTriples ++ InEdgeTriples
             )
     end.
 
+observe_triple_to_rdf(#triple_to_rdf{ontology = schema_org} = TripleToRdf, Context) ->
+    rdf_schema_org:triple_to_rdf(TripleToRdf, Context);
+observe_triple_to_rdf(_TripleToRdf, _Context) ->
+    undefined.
 
 observe_serialize_rdf(#serialize_rdf{rdf_graph = RdfGraph, serialization = turtle}, Context) ->
     rdf_turtle:serialize(RdfGraph, Context);
