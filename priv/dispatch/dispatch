@@ -1,9 +1,15 @@
 %% -*- mode: erlang -*-
 [
-  % Default endpoints for the most common cases (schema.org, JSON+LD and Turtle)
-  {rdf_schema_org_json_ld, ["rdf", "json_ld", id], controller_rdf, [{serialization, json_ld}, {ontology, schema_org}]},
-  {rdf_schema_org_turtle, ["rdf", "turtle", id], controller_rdf, [{serialization, turtle}, {ontology, schema_org}]},
+  % Default endpoints for the most common serializations (JSON+LD and Turtle)
+  {rdf_schema_org_json_ld, ["rdf", "json_ld", id], controller_rdf, [{serialization, json_ld}]},
+  {rdf_schema_org_turtle, ["rdf", "turtle", id], controller_rdf, [{serialization, turtle}]},
 
-  % Generic endpoint for every pair of 'serialization' and 'ontology'
-  {rdf_any, ["rdf", serialization, ontology, id], controller_rdf, []}
+  % Generic endpoint for any pair of 'serialization' and 'ontology'
+  {rdf_any_pair, ["rdf", serialization, ontology, id], controller_rdf, []},
+
+  % Generic endpoint for a 'serialization' and (possibly multiple) 'ontology' as query arguments
+  {rdf_any, ["rdf", serialization, id], controller_rdf, []},
+
+  % Generic endpoint for a 'serialization' and (possibly multiple) 'ontology' as query arguments
+  {rdf_any, ["rdf", id], controller_rdf, []}
 ].

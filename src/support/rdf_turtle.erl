@@ -1,5 +1,7 @@
 %% @author Driebit
 %% @copyright 2025 Driebit
+%% @doc Default implementation for Turtle serialization.
+%% See also: https://www.w3.org/TR/rdf12-turtle/
 %% @end
 
 -module(rdf_turtle).
@@ -30,6 +32,7 @@ serialize(RdfGraph, _Context) ->
         lists:usort(Lines)
     )}.
 
+-spec serialize_triple(#rdf_triple{}) -> list(binary()).
 serialize_triple(#rdf_triple{subject = Subject, predicate = Predicate, object = Object} = RdfTriple) ->
     case Object of
         IRI when is_binary(IRI) ->
@@ -58,7 +61,7 @@ serialize_triple(#rdf_triple{subject = Subject, predicate = Predicate, object = 
             Referencing ++ ObjectTriple
     end.
 
--spec to_line(binary(), binary(), binary()) -> binary().
+-spec to_line(binary(), binary(), binary()) -> list(binary()).
 to_line(Subject, Predicate, Object) ->
     [<<Subject/binary, " ", Predicate/binary, " ", Object/binary, ".">>].
 
@@ -125,6 +128,8 @@ serialize_lexical_form(LexicalForm) when is_binary(LexicalForm) ->
     Escaped = escape(LexicalForm),
     <<$", Escaped/binary, $">>.
 
+% Produce a blank node identifier: https://www.w3.org/TR/rdf12-turtle/#BNodes
+% Note: this is constant, it always returns the same string for a given input.
 -spec blank_node(term()) -> binary().
 blank_node(Term) ->
     <<"_:", (erlang:integer_to_binary(erlang:phash2(Term)))/binary>>.

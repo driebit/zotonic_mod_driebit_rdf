@@ -1,5 +1,7 @@
 %% @author Driebit
 %% @copyright 2025 Driebit
+%% @doc Default implementation for Schema.org ontology.
+%% See also: https://schema.org/docs/about.html
 %% @end
 
 -module(rdf_schema_org).
@@ -15,7 +17,7 @@
     outedge_to_rdf/5,
     inedge_to_rdf/5,
 
-    namespace_iri/1,
+    namespaced_iri/1,
     type_triple/3
 ]).
 
@@ -89,13 +91,13 @@ property_to_rdf(RscId, text, <<"body">>, Value, Context) ->
         [
             rdf_utils:value_triple(
                 RscId,
-                namespace_iri(articleBody),
+                namespaced_iri(articleBody),
                 Value,
                 Context
             ),
             rdf_utils:value_triple(
                 RscId,
-                namespace_iri(encodingFormat),
+                namespaced_iri(encodingFormat),
                 <<"text/html">>,
                 Context
             )
@@ -104,161 +106,161 @@ property_to_rdf(RscId, text, <<"body">>, Value, Context) ->
 property_to_rdf(RscId, _Category, <<"created">>, Value, Context) ->
     {ok, rdf_utils:value_triple(
         RscId,
-        namespace_iri(dateCreated),
+        namespaced_iri(dateCreated),
         Value,
         Context
     )};
 property_to_rdf(RscId, event, <<"date_start">>, Value, Context) ->
     {ok, rdf_utils:value_triple(
         RscId,
-        namespace_iri(startDate),
+        namespaced_iri(startDate),
         Value,
         Context
     )};
 property_to_rdf(RscId, event, <<"date_end">>, Value, Context) ->
     {ok, rdf_utils:value_triple(
         RscId,
-        namespace_iri(endDate),
+        namespaced_iri(endDate),
         Value,
         Context
     )};
 property_to_rdf(RscId, person, <<"birth_city">>, Value, Context) ->
     {ok, rdf_utils:nested_triple(
         RscId,
-        [namespace_iri(birthPlace), namespace_iri(address), namespace_iri(addressLocality)],
+        [namespaced_iri(birthPlace), namespaced_iri(address), namespaced_iri(addressLocality)],
         Value,
         Context
     )};
 property_to_rdf(RscId, person, <<"date_start">>, Value, Context) ->
     {ok, rdf_utils:value_triple(
         RscId,
-        namespace_iri(birthDate),
+        namespaced_iri(birthDate),
         Value,
         Context
     )};
 property_to_rdf(RscId, person, <<"date_end">>, Value, Context) ->
     {ok, rdf_utils:value_triple(
         RscId,
-        namespace_iri(deathDate),
+        namespaced_iri(deathDate),
         Value,
         Context
     )};
 property_to_rdf(RscId, person, <<"name_first">>, Value, Context) ->
     {ok, rdf_utils:value_triple(
         RscId,
-        namespace_iri(givenName),
+        namespaced_iri(givenName),
         Value,
         Context
     )};
 property_to_rdf(RscId, person, <<"name_surname">>, Value, Context) ->
     {ok, rdf_utils:value_triple(
         RscId,
-        namespace_iri(familyName),
+        namespaced_iri(familyName),
         Value,
         Context
     )};
 property_to_rdf(RscId, person, <<"email">>, Value, Context) ->
     {ok, rdf_utils:value_triple(
         RscId,
-        namespace_iri(email),
+        namespaced_iri(email),
         Value,
         Context
     )};
 property_to_rdf(RscId, _Category, <<"license">>, Value, Context) ->
     {ok, rdf_utils:value_triple(
         RscId,
-        namespace_iri(license),
+        namespaced_iri(license),
         Value,
         Context
     )};
 property_to_rdf(RscId, _Category, <<"modified">>, Value, Context) ->
     {ok, rdf_utils:value_triple(
         RscId,
-        namespace_iri(dateModified),
+        namespaced_iri(dateModified),
         Value,
         Context
     )};
 property_to_rdf(RscId, _Category, <<"phone">>, Value, Context) ->
     {ok, rdf_utils:value_triple(
         RscId,
-        namespace_iri(telephone),
+        namespaced_iri(telephone),
         Value,
         Context
     )};
 property_to_rdf(RscId, text, <<"publication_start">>, Value, Context) ->
     {ok, rdf_utils:value_triple(
         RscId,
-        namespace_iri(datePublished),
+        namespaced_iri(datePublished),
         Value,
         Context
     )};
 property_to_rdf(RscId, artifact, <<"publication_start">>, Value, Context) ->
     {ok, rdf_utils:value_triple(
         RscId,
-        namespace_iri(datePublished),
+        namespaced_iri(datePublished),
         Value,
         Context
     )};
 property_to_rdf(RscId, text, <<"subtitle">>, Value, Context) ->
     {ok, rdf_utils:value_triple(
         RscId,
-        namespace_iri(alternativeHeadline),
+        namespaced_iri(alternativeHeadline),
         Value,
         Context
     )};
 property_to_rdf(RscId, artifact, <<"subtitle">>, Value, Context) ->
     {ok, rdf_utils:value_triple(
         RscId,
-        namespace_iri(alternativeHeadline),
+        namespaced_iri(alternativeHeadline),
         Value,
         Context
     )};
 property_to_rdf(RscId, media, <<"subtitle">>, Value, Context) ->
     {ok, rdf_utils:value_triple(
         RscId,
-        namespace_iri(caption),
+        namespaced_iri(caption),
         Value,
         Context
     )};
 property_to_rdf(RscId, _Category, <<"summary">>, Value, Context) ->
     {ok, rdf_utils:value_triple(
         RscId,
-        namespace_iri(description),
+        namespaced_iri(description),
         Value,
         Context
     )};
 property_to_rdf(RscId, text, <<"title">>, Value, Context) ->
     {ok, rdf_utils:value_triple(
         RscId,
-        namespace_iri(headline),
+        namespaced_iri(headline),
         Value,
         Context
     )};
 property_to_rdf(RscId, artifact, <<"title">>, Value, Context) ->
     {ok, rdf_utils:value_triple(
         RscId,
-        namespace_iri(headline),
+        namespaced_iri(headline),
         Value,
         Context
     )};
 property_to_rdf(RscId, collection, <<"title">>, Value, Context) ->
     {ok, rdf_utils:value_triple(
         RscId,
-        namespace_iri(headline),
+        namespaced_iri(headline),
         Value,
         Context
     )};
 property_to_rdf(RscId, person, <<"title">>, Value, Context) ->
     {ok, rdf_utils:value_triple(
         RscId,
-        namespace_iri(name),
+        namespaced_iri(name),
         Value,
         Context
     )};
 property_to_rdf(RscId, person, <<"subtitle">>, Value, Context) ->
     {ok, rdf_utils:value_triple(
         RscId,
-        namespace_iri(alternateName),
+        namespaced_iri(alternateName),
         Value,
         Context
     )};
@@ -267,13 +269,13 @@ property_to_rdf(RscId, keyword, <<"title">>, Value, Context) ->
         [
             rdf_utils:value_triple(
                 RscId,
-                namespace_iri(name),
+                namespaced_iri(name),
                 Value,
                 Context
             ),
             rdf_utils:value_triple(
                 RscId,
-                namespace_iri(termCode),
+                namespaced_iri(termCode),
                 Value,
                 Context
             )
@@ -282,7 +284,7 @@ property_to_rdf(RscId, keyword, <<"title">>, Value, Context) ->
 property_to_rdf(RscId, _Category, <<"website">>, Value, Context) ->
     {ok, rdf_utils:value_triple(
         RscId,
-        namespace_iri(url),
+        namespaced_iri(url),
         Value,
         Context
     )};
@@ -301,7 +303,7 @@ property_to_rdf(RscId, query, <<"query">>, _Value, Context) ->
         fun (ResId) ->
             rdf_utils:resolve_triple(
                 RscId,
-                namespace_iri(hasPart),
+                namespaced_iri(hasPart),
                 ResId,
                 Context
             )
@@ -313,28 +315,28 @@ property_to_rdf(RscId, query, <<"query">>, _Value, Context) ->
 property_to_rdf(RscId, address, <<"address_city">>, Value, Context) ->
     {ok, rdf_utils:nested_triple(
         RscId,
-        [namespace_iri(address), namespace_iri(addressLocality)],
+        [namespaced_iri(address), namespaced_iri(addressLocality)],
         Value,
         Context
     )};
 property_to_rdf(RscId, address, <<"address_postcode">>, Value, Context) ->
     {ok, rdf_utils:nested_triple(
         RscId,
-        [namespace_iri(address), namespace_iri(postalCode)],
+        [namespaced_iri(address), namespaced_iri(postalCode)],
         Value,
         Context
     )};
 property_to_rdf(RscId, address, <<"address_street_1">>, Value, Context) ->
     {ok, rdf_utils:nested_triple(
         RscId,
-        [namespace_iri(address), namespace_iri(streetAddress)],
+        [namespaced_iri(address), namespaced_iri(streetAddress)],
         Value,
         Context
     )};
 property_to_rdf(RscId, address, <<"address_country">>, Value, Context) ->
     {ok, rdf_utils:nested_triple(
         RscId,
-        [namespace_iri(address), namespace_iri(addressCountry)],
+        [namespaced_iri(address), namespaced_iri(addressCountry)],
         Value,
         Context
     )};
@@ -342,14 +344,14 @@ property_to_rdf(RscId, address, <<"address_country">>, Value, Context) ->
 property_to_rdf(RscId, address, <<"pivot_location_lat">>, Value, Context) ->
     {ok, rdf_utils:nested_triple(
         RscId,
-        [namespace_iri(geo), namespace_iri(latitude)],
+        [namespaced_iri(geo), namespaced_iri(latitude)],
         Value,
         Context
     )};
 property_to_rdf(RscId, address, <<"pivot_location_lng">>, Value, Context) ->
     {ok, rdf_utils:nested_triple(
         RscId,
-        [namespace_iri(geo), namespace_iri(longitude)],
+        [namespaced_iri(geo), namespaced_iri(longitude)],
         Value,
         Context
     )};
@@ -368,84 +370,84 @@ property_to_rdf(RscId, Category, PropName, Value, Context) ->
 outedge_to_rdf(RscId, text, <<"about">>, ObjectId, Context) ->
     {ok, rdf_utils:resolve_triple(
         RscId,
-        namespace_iri(about),
+        namespaced_iri(about),
         ObjectId,
         Context
     )};
 outedge_to_rdf(RscId, artifact, <<"about">>, ObjectId, Context) ->
     {ok, rdf_utils:resolve_triple(
         RscId,
-        namespace_iri(about),
+        namespaced_iri(about),
         ObjectId,
         Context
     )};
 outedge_to_rdf(RscId, collection, <<"about">>, ObjectId, Context) ->
     {ok, rdf_utils:resolve_triple(
         RscId,
-        namespace_iri(about),
+        namespaced_iri(about),
         ObjectId,
         Context
     )};
 outedge_to_rdf(RscId, event, <<"about">>, ObjectId, Context) ->
     {ok, rdf_utils:resolve_triple(
         RscId,
-        namespace_iri(about),
+        namespaced_iri(about),
         ObjectId,
         Context
     )};
 outedge_to_rdf(RscId, text, <<"author">>, ObjectId, Context) ->
     {ok, rdf_utils:resolve_triple(
         RscId,
-        namespace_iri(author),
+        namespaced_iri(author),
         ObjectId,
         Context
     )};
 outedge_to_rdf(RscId, artifact, <<"author">>, ObjectId, Context) ->
     {ok, rdf_utils:resolve_triple(
         RscId,
-        namespace_iri(author),
+        namespaced_iri(author),
         ObjectId,
         Context
     )};
 outedge_to_rdf(RscId, collection, <<"author">>, ObjectId, Context) ->
     {ok, rdf_utils:resolve_triple(
         RscId,
-        namespace_iri(author),
+        namespaced_iri(author),
         ObjectId,
         Context
     )};
 outedge_to_rdf(RscId, _Category, <<"depiction">>, ObjectId, Context) ->
     {ok, rdf_utils:resolve_triple(
         RscId,
-        namespace_iri(image),
+        namespaced_iri(image),
         ObjectId,
         Context
     )};
 outedge_to_rdf(RscId, _Category, <<"subject">>, ObjectId, Context) ->
     {ok, rdf_utils:resolve_triple(
         RscId,
-        namespace_iri(keywords),
+        namespaced_iri(keywords),
         ObjectId,
         Context
     )};
 outedge_to_rdf(RscId, text, <<"haspart">>, ObjectId, Context) ->
     {ok, rdf_utils:resolve_triple(
         RscId,
-        namespace_iri(hasPart),
+        namespaced_iri(hasPart),
         ObjectId,
         Context
     )};
 outedge_to_rdf(RscId, artifact, <<"haspart">>, ObjectId, Context) ->
     {ok, rdf_utils:resolve_triple(
         RscId,
-        namespace_iri(hasPart),
+        namespaced_iri(hasPart),
         ObjectId,
         Context
     )};
 outedge_to_rdf(RscId, collection, <<"haspart">>, ObjectId, Context) ->
     {ok, rdf_utils:resolve_triple(
         RscId,
-        namespace_iri(hasPart),
+        namespaced_iri(hasPart),
         ObjectId,
         Context
     )};
@@ -464,7 +466,7 @@ outedge_to_rdf(RscId, Category, PredName, Value, Context) ->
 inedge_to_rdf(RscId, _Category, <<"about">>, SubjectId, Context) ->
     {ok, rdf_utils:resolve_triple(
         RscId,
-        namespace_iri(subjectOf),
+        namespaced_iri(subjectOf),
         SubjectId,
         Context
     )};
@@ -478,16 +480,16 @@ inedge_to_rdf(RscId, Category, PredName, Value, Context) ->
             inedge_to_rdf(RscId, ParentCat, PredName, Value, Context)
     end.
 
--spec namespace_iri(atom() | binary()) -> iri().
-namespace_iri(TermName) when is_atom(TermName) ->
-    namespace_iri(z_convert:to_binary(TermName));
-namespace_iri(TermName) when is_binary(TermName) ->
-    <<"http://www.w3.org/2001/XMLSchema#", TermName/binary>>.
+-spec namespaced_iri(atom() | binary()) -> iri().
+namespaced_iri(TermName) when is_atom(TermName) ->
+    namespaced_iri(z_convert:to_binary(TermName));
+namespaced_iri(TermName) when is_binary(TermName) ->
+    <<"https://schema.org/", TermName/binary>>.
 
 -spec type_triple(m_rsc:resource(), iri(), z:context()) -> #rdf_triple{}.
 type_triple(RscId, SchemaType, Context) ->
     #rdf_triple{
         subject = rdf_utils:resolve_iri(RscId, Context),
-        predicate = rdf_xsd:rdf_namespace_iri(type),
-        object = namespace_iri(SchemaType)
+        predicate = rdf_xsd:rdf_namespaced_iri(type),
+        object = namespaced_iri(SchemaType)
     }.
