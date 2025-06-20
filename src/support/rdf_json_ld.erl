@@ -1,6 +1,9 @@
 %% @author Driebit
 %% @copyright 2025 Driebit
+%% @doc Default implementation for JSON-LD serialization.
+%% See also: https://www.w3.org/TR/json-ld11/
 %% @end
+
 
 -module(rdf_json_ld).
 -author("Driebit <tech@driebit.nl>").

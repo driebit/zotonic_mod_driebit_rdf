@@ -1,5 +1,6 @@
 %% @author Driebit
 %% @copyright 2025 Driebit
+%% @doc Utilities for the creation/manipulation of RDF types.
 %% @end
 
 -module(rdf_utils).
@@ -21,6 +22,7 @@
 ]).
 
 
+% Resolve the given resource IDs to a triple using the given predicate.
 -spec resolve_triple(m_rsc:resource() | undefined, iri(), m_rsc:resource() | undefined, z:context() ) -> #rdf_triple{}.
 resolve_triple(SubjectRsc, Predicate, ObjectRsc, Context) ->
     #rdf_triple{
@@ -29,6 +31,7 @@ resolve_triple(SubjectRsc, Predicate, ObjectRsc, Context) ->
         object = resolve_iri(ObjectRsc, Context)
     }.
 
+% Resolve the given resource ID and value to a triple using the given predicate.
 -spec value_triple(m_rsc:resource() | undefined, iri(), #rdf_literal{} | term(), z:context() ) -> #rdf_triple{}.
 value_triple(SubjectRsc, Predicate, #rdf_literal{} = Object, Context) ->
     #rdf_triple{
@@ -43,6 +46,8 @@ value_triple(SubjectRsc, Predicate, Object, Context) ->
         object = to_literal(Object, Context)
     }.
 
+% Like 'value_triple', but for values linked by a chain of predicates.
+% Note: the intermediate triples are created with 'blank' subjects.
 -spec nested_triple(m_rsc:resource() | undefined, list(iri()), #rdf_literal{} | term(), z:context() ) -> #rdf_triple{}.
 nested_triple(SubjectRsc, [Predicate], Object, Context) when is_binary(Predicate) ->
     value_triple(SubjectRsc, Predicate, Object, Context);
@@ -53,6 +58,7 @@ nested_triple(SubjectRsc, [Predicate | Predicates], Object, Context) ->
         object = nested_triple(undefined, Predicates, Object, Context)
     }.
 
+% Resolve the IRI of a resource from its ID.
 -spec resolve_iri( m_rsc:resource(), z:context() ) -> iri() | blank.
 resolve_iri(Rsc, Context) ->
     case m_rsc:rid(Rsc, Context) of
@@ -65,16 +71,17 @@ resolve_iri(Rsc, Context) ->
             end
     end.
 
-% https://www.w3.org/TR/rdf12-concepts/#xsd-datatypes
+% Convert any value to an RDF literal, using the standard 'xsd' namespace.
+% See also: https://www.w3.org/TR/rdf12-concepts/#xsd-datatypes
 -spec to_literal( term(), z:context() ) -> #rdf_literal{}.
 to_literal(Value, _Context) when is_binary(Value) ->
     case z_string:sanitize_utf8(Value) of
         Value ->
             % if the binary is all valid utf8, treat it as a string:
-            to_literal(Value, rdf_xsd:namespace_iri(string), undefined);
+            to_literal(Value, rdf_xsd:namespaced_iri(string), undefined);
         _Other ->
             % otherwise, encode it as a hex binary:
-            to_literal(z_utils:hex_encode(Value), rdf_xsd:namespace_iri(hexBinary), undefined)
+            to_literal(z_utils:hex_encode(Value), rdf_xsd:namespaced_iri(hexBinary), undefined)
     end;
 to_literal(Value, Context) when is_atom(Value) ->
     to_literal(z_convert:to_binary(Value), Context);
@@ -82,15 +89,15 @@ to_literal(Value, Context) when is_list(Value) ->
     to_literal(z_convert:to_binary(Value), Context);
 
 to_literal(Value, _Context) when is_boolean(Value) ->
-    to_literal(z_convert:to_binary(Value), rdf_xsd:namespace_iri(boolean), undefined);
+    to_literal(z_convert:to_binary(Value), rdf_xsd:namespaced_iri(boolean), undefined);
 to_literal(Value, _Context) when is_float(Value) ->
-    to_literal(z_convert:to_binary(Value), rdf_xsd:namespace_iri(decimal), undefined);
+    to_literal(z_convert:to_binary(Value), rdf_xsd:namespaced_iri(decimal), undefined);
 to_literal(Value, _Context) when is_integer(Value) ->
-    to_literal(z_convert:to_binary(Value), rdf_xsd:namespace_iri(integer), undefined);
+    to_literal(z_convert:to_binary(Value), rdf_xsd:namespaced_iri(integer), undefined);
 
 to_literal({{_, _, _}, {_, _, _}} = DTValue, _Context) ->
     Value = z_dateformat:format(DTValue, "c", []),
-    to_literal(z_convert:to_binary(Value), rdf_xsd:namespace_iri(dateTime), undefined);
+    to_literal(z_convert:to_binary(Value), rdf_xsd:namespaced_iri(dateTime), undefined);
 to_literal(#trans{tr = Tr} = TransRec, Context) ->
     case z_trans:lookup_fallback(TransRec, Context) of
         undefined ->
@@ -103,7 +110,7 @@ to_literal(#trans{tr = Tr} = TransRec, Context) ->
                 true -> rtl;
                 false -> ltr
             end,
-            to_literal(Value, rdf_xsd:namespace_iri(string), LanguageTag, BaseDirection)
+            to_literal(Value, rdf_xsd:namespaced_iri(string), LanguageTag, BaseDirection)
     end;
 
 to_literal(Value, Context) ->
