@@ -15,6 +15,7 @@
     nested_triple/4,
 
     resolve_iri/2,
+    prefixed_iri/2,
 
     to_literal/2,
     to_literal/3,
@@ -70,6 +71,23 @@ resolve_iri(Rsc, Context) ->
                 URI when is_binary(URI) -> URI
             end
     end.
+
+-spec prefixed_iri(iri(), map()| list({binary() | undefined, binary()})) -> iri() | undefined.
+prefixed_iri(IRI, NamespaceMap) when is_map(NamespaceMap) ->
+    prefixed_iri(IRI, maps:to_list(NamespaceMap));
+prefixed_iri(IRI, [{NamespacePrefix, NamespaceIRI} | Namespaces]) ->
+    NamespaceSize = size(NamespaceIRI),
+    case IRI of
+        <<NamespaceIRI:NamespaceSize/binary, Rest/binary>> ->
+            if
+                NamespacePrefix =:= undefined -> Rest;
+                is_binary(NamespacePrefix) -> <<NamespacePrefix/binary, ":", Rest/binary>>
+            end;
+        _ ->
+            prefixed_iri(IRI, Namespaces)
+    end;
+prefixed_iri(_, _) ->
+    undefined.
 
 % Convert any value to an RDF literal, using the standard 'xsd' namespace.
 % See also: https://www.w3.org/TR/rdf12-concepts/#xsd-datatypes

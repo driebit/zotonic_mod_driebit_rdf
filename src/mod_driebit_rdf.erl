@@ -20,10 +20,15 @@
 -export([
     manage_schema/2,
     observe_content_types_dispatch/3,
+    observe_serialization_content_type/2,
 
     rsc_to_rdf/4,
+    rsc_to_rdf/5,
+    serialize_rdf/4,
+
     observe_rsc_to_rdf_graph/2,
     observe_triple_to_rdf/2,
+    observe_expand_namespace/2,
     observe_serialize_rdf/2
 ]).
 
@@ -33,23 +38,36 @@ manage_schema(_, _) ->
 -spec observe_content_types_dispatch(#content_types_dispatch{}, list(), #context{}) -> list().
 observe_content_types_dispatch(#content_types_dispatch{}, Acc, _Context) ->
     [
-        {"application/ld+json", rdf_schema_org_json_ld},
-        {"text/turtle", rdf_schema_org_turtle}
+        {{<<"text">>, <<"turtle">>, []}, rdf_schema_org_turtle},
+        {{<<"application">>, <<"ld+json">>, []}, rdf_schema_org_json_ld}
     | Acc].
 
+-spec observe_serialization_content_type(#serialization_content_type{}, #context{}) ->
+    {binary(), binary(), [{binary(), binary()}]} | undefined.
+observe_serialization_content_type(#serialization_content_type{serialization = turtle}, _Context) ->
+    {<<"text">>, <<"turtle">>, []};
+observe_serialization_content_type(#serialization_content_type{serialization = json_ld}, _Context) ->
+    {<<"application">>, <<"ld+json">>, []};
+observe_serialization_content_type(#serialization_content_type{}, _Context) ->
+    undefined.
 
 % RDF representation of a resource using the given ontologies and serialization.
 -spec rsc_to_rdf(m_rsc:resource_id(), list(atom()) | atom(), atom(), #context{}) -> {ok, binary()} | {error, term()}.
-rsc_to_rdf(RscId, Ontology, Serialization, Context) when is_atom(Ontology) ->
-    rsc_to_rdf(RscId, [Ontology], Serialization, Context);
-rsc_to_rdf(RscId, Ontologies, Serialization, Context) when is_list(Ontologies) ->
+rsc_to_rdf(RscId, Ontology, Serialization, Context) ->
+    rsc_to_rdf(RscId, Ontology, Serialization, [], Context).
+
+% RDF representation of a resource using the given ontologies, serialization and namespaces.
+-spec rsc_to_rdf(m_rsc:resource_id(), list(atom()) | atom(), atom(), list(atom()), #context{}) -> {ok, binary()} | {error, term()}.
+rsc_to_rdf(RscId, Ontology, Serialization, Namespaces, Context) when is_atom(Ontology) ->
+    rsc_to_rdf(RscId, [Ontology], Serialization, Namespaces, Context);
+rsc_to_rdf(RscId, Ontologies, Serialization, Namespaces, Context) when is_list(Ontologies) ->
     % First build an RDF graph with a 'rsc_to_rdf_graph' notification per ontology
     RdfGraphResult = lists:foldl(
         fun
             (_Ontology, {error, _Reason} = Error) ->
                 Error;
             (Ontology, {ok, AccRdfGraph}) ->
-                 Rsc_to_rdf_graph = #rsc_to_rdf_graph{
+                Rsc_to_rdf_graph = #rsc_to_rdf_graph{
                     rsc_id = RscId,
                     category = lists:last(m_rsc:is_a(RscId, Context)),
                     ontology = Ontology
@@ -66,27 +84,50 @@ rsc_to_rdf(RscId, Ontologies, Serialization, Context) when is_list(Ontologies) -
         {ok, sets:new()},
         Ontologies
     ),
-    % Then, if you have a graph, serialize it with a 'serialize_rdf' notification
+    % then, if you have a graph, serialize it:
     case RdfGraphResult of
         {error, Reason} ->
             {error, Reason};
         {ok, RdfGraph} ->
-            case sets:is_empty(RdfGraph) of
-                true ->
-                    {error, no_rdf_graph};
-                false ->
-                    Serialize_rdf = #serialize_rdf{
-                        rdf_graph = RdfGraph,
-                        serialization = Serialization
-                    },
-                    case z_notifier:first(Serialize_rdf, Context) of
-                        undefined ->
-                            {error, no_rdf_serialization};
-                        Result ->
-                            Result
-                    end
-            end
+            serialize_rdf(RdfGraph, Serialization, Namespaces, Context)
     end.
+
+% Representation of an RDF graph using the given serialization and namespaces.
+-spec serialize_rdf(rdf_graph(), atom(), map() | list(), #context{}) -> {ok, binary()} | {error, term()}.
+serialize_rdf(RdfGraph, Serialization, NamespaceMap, Context) when is_map(NamespaceMap) ->
+    % if the graph is not empty, serialize it with a 'serialize_rdf' notification
+    case sets:is_empty(RdfGraph) of
+        true ->
+            {error, no_rdf_graph};
+        false ->
+            Serialize_rdf = #serialize_rdf{
+                rdf_graph = RdfGraph,
+                serialization = Serialization,
+                namespace_map = NamespaceMap
+            },
+            case z_notifier:first(Serialize_rdf, Context) of
+                undefined ->
+                    {error, no_rdf_serialization};
+                Result ->
+                    Result
+            end
+    end;
+serialize_rdf(RdfGraph, Serialization, Namespaces, Context) when is_list(Namespaces) ->
+    % find the namespaces prefixes and IRIs with 'expand_namespace' notification
+    NamespaceMap = lists:foldl(
+        fun (Namespace, Acc) ->
+                ExpandNamespace = #expand_namespace{name = Namespace},
+                case z_notifier:first(ExpandNamespace, Context) of
+                    {NamespacePrefix, NamespaceIRI} ->
+                        maps:put(NamespacePrefix, NamespaceIRI, Acc);
+                    _ ->
+                        Acc
+                end
+        end,
+        maps:new(),
+        Namespaces
+    ),
+    serialize_rdf(RdfGraph, Serialization, NamespaceMap, Context).
 
 % Default implementation for 'rsc_to_rdf_graph', using all fields and edges to
 % compute a graph via multiple 'triple_to_rdf' notifications.
@@ -172,11 +213,27 @@ observe_triple_to_rdf(#triple_to_rdf{ontology = schema_org} = TripleToRdf, Conte
 observe_triple_to_rdf(_TripleToRdf, _Context) ->
     undefined.
 
+% "Expansion" of a namespace name to a namespace prefix/base IRI.
+-spec observe_expand_namespace(#expand_namespace{}, #context{}) ->
+    {binary() | undefined, iri()} | undefined.
+observe_expand_namespace(#expand_namespace{name = site}, Context) ->
+    {<<"site">>, z_context:site_url(undefined, Context)};
+observe_expand_namespace(#expand_namespace{name = xsd}, _Context) ->
+    {<<"xsd">>, rdf_xsd:namespace_iri()};
+observe_expand_namespace(#expand_namespace{name = rdf}, _Context) ->
+    {<<"rdf">>, rdf_xsd:rdf_namespace_iri()};
+observe_expand_namespace(#expand_namespace{name = rdfs}, _Context) ->
+    {<<"rdfs">>, rdf_xsd:rdfs_namespace_iri()};
+observe_expand_namespace(#expand_namespace{name = schema_org}, _Context) ->
+    {undefined, rdf_schema_org:namespace_iri()};
+observe_expand_namespace(#expand_namespace{}, _Context) ->
+    undefined.
+
 -spec observe_serialize_rdf(#serialize_rdf{}, #context{}) ->
     {ok, binary()} | {error, term()} | undefined.
-observe_serialize_rdf(#serialize_rdf{rdf_graph = RdfGraph, serialization = turtle}, Context) ->
-    rdf_turtle:serialize(RdfGraph, Context);
-observe_serialize_rdf(#serialize_rdf{rdf_graph = RdfGraph, serialization = json_ld}, Context) ->
-    rdf_json_ld:serialize(RdfGraph, Context);
+observe_serialize_rdf(#serialize_rdf{rdf_graph = RdfGraph, serialization = turtle, namespace_map = NSMap}, Context) ->
+    rdf_turtle:serialize(RdfGraph, NSMap, Context);
+observe_serialize_rdf(#serialize_rdf{rdf_graph = RdfGraph, serialization = json_ld, namespace_map = NSMap}, Context) ->
+    rdf_json_ld:serialize(RdfGraph, NSMap, Context);
 observe_serialize_rdf(#serialize_rdf{}, _Context) ->
     undefined.

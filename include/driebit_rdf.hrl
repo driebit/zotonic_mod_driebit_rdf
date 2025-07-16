@@ -50,5 +50,14 @@
 
 -record(serialize_rdf, {
     rdf_graph :: rdf_graph(),
+    serialization :: atom(),
+    namespace_map :: map()
+}).
+
+-record(expand_namespace, {
+    name :: atom()
+}).
+
+-record(serialization_content_type, {
     serialization :: atom()
 }).

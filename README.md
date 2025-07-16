@@ -30,15 +30,18 @@ curl -L http://yoursite.com/rdf/json_ld/<id>
 curl -L http://yoursite.com/rdf/turtle/<id>
 ```
 
-Additionally, the module supports custom ontologies and representations (see
-below), whose result can be obtained with the generic endpoints:
+Additionally, the module supports custom ontologies, representations and
+namespaces (see below), whose result can be obtained with the generic endpoints:
 ```bash
-curl -L http://yoursite.com/rdf/<ser>/<ont>/<id>
-curl -L http://yoursite.com/rdf/<ser>/<id>?ontology=<ont>
-curl -L http://yoursite.com/rdf/<id>?ontology=<ont>&serialization=<ser>
+curl -L http://yoursite.com/rdf/<ser>/<ont>/<id>?namespace=<ns>
+curl -L http://yoursite.com/rdf/<ser>/<id>?ontology=<ont>&namespace=<ns>
+curl -L http://yoursite.com/rdf/<id>?ontology=<ont>&serialization=<ser>&namespace=<ns>
 ```
-(where `<ser>` and `<ont>` are the name of the serialization and ontology used
-and the `?ontology` query parameter can be specified multiple times).
+where:
+1. `<ser>`, `<ont>` and `<ns>` are the name of the serialization, ontology and
+  namespace used, respectively;
+2. the `?ontology` and `?namespace` query parameter can be specified multiple
+  times.
 
 #### Export rules
 
@@ -53,9 +56,10 @@ The RDF export follows some rules.
   and allows any origin in its [Access-Control-Allow-Origin header](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Access-Control-Allow-Origin).
 - Ontologies and serializations are separate steps in making an RDF representation:
   - supported ontologies produce an [RDF Graph](https://www.w3.org/TR/rdf12-concepts/#dfn-rdf-graph)
-    without needing to know how they'll be serialized.
+    without needing to know how they'll be serialized (or in which namespace).
   - supported serializations produce a [concrete representation](https://www.w3.org/TR/rdf12-concepts/#dfn-concrete-rdf-syntax)
-    starting from an _RDF Graph_ without needing to know which ontologies were used.
+    starting from an _RDF Graph_ and (optionally) [namespaces](https://www.w3.org/TR/rdf12-concepts/#dfn-namespace-prefix),
+    without needing to know which ontologies were used.
 - The default representations use the [Schema.org ontology](https://schema.org/),
   as [recommended by NDE](https://netwerk-digitaal-erfgoed.github.io/cm-implementation-guidelines/#generic-data-model) and either the [Turtle](https://www.w3.org/TR/rdf12-turtle/)
   or [JSON-LD](https://www.w3.org/TR/json-ld11/) serialization.
@@ -87,7 +91,11 @@ Notifications
 -------------
 
 This module uses [Zotonic Notifications](https://zotonic.com/docs/1274/notifications)
-which can be used to change or expand the supported ontologies and/or serializations.
+which can be used to change or expand the supported:
+- ontologies
+- serializations
+- content types
+- namespace prefixes
 
 The types for RDF structures and the notifications used here can all be found in
 the [`driebit_rdf` header file](include/driebit_rdf.hrl) and included with:
@@ -195,10 +203,63 @@ a `binary` result string:
 
 -include("zotonic_mod_driebit_rdf/include/driebit_rdf.hrl").
 
-observe_serialize_rdf(#serialize_rdf{rdf_graph = RdfGraph, serialization = trig}, Context) ->
+observe_serialize_rdf(#serialize_rdf{rdf_graph = RdfGraph, serialization = trig, namespace_map = NSMap}, Context) ->
     Result = <<"">>,
     % ... code to serialize the graph to TriG ...
     {ok, Result};
 observe_serialize_rdf(#serialize_rdf{}, _Context) ->
     undefined.
 ```
+
+#### Changing the serialization's content type
+
+Serializations are usually associated with one or more specific content types,
+`controller_rdf` decides which ones to use using the `serialization_content_type`
+notification.
+
+
+For example, this modules already defines the two it supports:
+```erlang
+-export([
+    observe_serialization_content_type/2
+]).
+
+-include("zotonic_mod_driebit_rdf/include/driebit_rdf.hrl").
+
+observe_serialization_content_type(#serialization_content_type{serialization = turtle}, _Context) ->
+    {<<"text">>, <<"turtle">>, []};
+observe_serialization_content_type(#serialization_content_type{serialization = json_ld}, _Context) ->
+    {<<"application">>, <<"ld+json">>, []};
+observe_serialization_content_type(#serialization_content_type{}, _Context) ->
+    undefined.
+```
+
+#### Changing the prefixed namespaces
+
+Serializations (can) also support the optional [namespace prefixes](https://www.w3.org/TR/rdf12-concepts/#dfn-namespace-prefix)
+which are given as a map to the `serialize_rdf` notification (see above).
+
+The namespaces to be prefixed [(selected with the `namespace` query parameter)](#represent-resources-in-rdf)
+can also be overridden or extended with a notification:
+
+```erlang
+-export([
+    observe_expand_namespace/2
+]).
+
+-include("zotonic_mod_driebit_rdf/include/driebit_rdf.hrl").
+
+-spec observe_expand_namespace(#expand_namespace{}, #context{}) ->
+    {binary() | undefined, iri()} | undefined.
+observe_expand_namespace(#expand_namespace{name = site}, Context) ->
+    {<<"site">>, z_context:site_url(undefined, Context)};
+observe_expand_namespace(#expand_namespace{name = schema_org}, _Context) ->
+    {undefined, rdf_schema_org:namespace_iri()};
+observe_expand_namespace(#expand_namespace{}, _Context) ->
+    undefined.
+```
+where one can return:
+- `{undefined, NamespaceIri}` to define a [base IRI](https://www.w3.org/TR/rdf12-concepts/#dfn-base-iri)
+- `{Prefix, NamespaceIri}` to define a [namespace prefix](https://www.w3.org/TR/rdf12-concepts/#dfn-namespace-prefix))
+- `undefined` to let someone else handle the notification
+

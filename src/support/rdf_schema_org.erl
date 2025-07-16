@@ -17,6 +17,7 @@
     outedge_to_rdf/5,
     inedge_to_rdf/5,
 
+    namespace_iri/0,
     namespaced_iri/1,
     type_triple/3
 ]).
@@ -480,11 +481,15 @@ inedge_to_rdf(RscId, Category, PredName, Value, Context) ->
             inedge_to_rdf(RscId, ParentCat, PredName, Value, Context)
     end.
 
+-spec namespace_iri() -> iri().
+namespace_iri() ->
+    <<"https://schema.org/">>.
+
 -spec namespaced_iri(atom() | binary()) -> iri().
 namespaced_iri(TermName) when is_atom(TermName) ->
     namespaced_iri(z_convert:to_binary(TermName));
 namespaced_iri(TermName) when is_binary(TermName) ->
-    <<"https://schema.org/", TermName/binary>>.
+    <<(namespace_iri())/binary, TermName/binary>>.
 
 -spec type_triple(m_rsc:resource(), iri(), z:context()) -> #rdf_triple{}.
 type_triple(RscId, SchemaType, Context) ->
