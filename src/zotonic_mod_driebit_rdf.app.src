@@ -7,5 +7,5 @@
     {modules, []},
     {maintainers, []},
     {licenses, ["Apache 2.0"]},
-    {links, [{"GitLab", "https://gitlab.driebit.nl/driebit/zotonic_mod_driebit_rdf"}]}
+    {links, [{"GitHub", "https://github.com/driebit/zotonic_mod_driebit_rdf"}]}
 ]}.
