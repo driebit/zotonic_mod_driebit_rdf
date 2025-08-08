@@ -99,14 +99,14 @@ get_serialization(Context) ->
     z_convert:to_atom(get_argument(serialization, Context)).
 
 get_ontologies(Context) ->
-    case lists:uniq(get_arguments(ontology, Context)) of
+    case lists:uniq(get_arguments(ontology, ontologies, Context)) of
         % when none is specified, default to the 'schema_org' ontology
         [] -> [schema_org];
         Ontologies -> Ontologies
     end.
 
 get_namespaces(Context) ->
-    get_arguments(namespace, Context).
+    get_arguments(namespace, namespaces, Context).
 
 get_argument(ArgName, Context) ->
     case z_context:get(ArgName, Context) of
@@ -114,10 +114,15 @@ get_argument(ArgName, Context) ->
         Value -> Value
     end.
 
-get_arguments(ArgName, Context) ->
+get_arguments(ArgName, MultArgName, Context) ->
     ArgsCtx = case z_context:get(ArgName, Context) of
-        undefined -> [];
-        Value -> [z_convert:to_atom(Value)]
+        undefined ->
+            case z_context:get(MultArgName, Context) of
+                Values when is_list(Values) -> lists:map(fun z_convert:to_atom/1, Values);
+                _ -> []
+            end;
+        Value ->
+            [z_convert:to_atom(Value)]
     end,
     ArgsQs = lists:map(
         fun z_convert:to_atom/1,
