@@ -212,8 +212,8 @@ observe_triple_to_rdf(#triple_to_rdf{ontology = schema_org} = TripleToRdf, Conte
     rdf_schema_org:triple_to_rdf(TripleToRdf, Context);
 observe_triple_to_rdf(#triple_to_rdf{ontology = pico_org} = TripleToRdf, Context) ->
     rdf_pico_org:triple_to_rdf(TripleToRdf, Context);
-observe_triple_to_rdf(#triple_to_rdf{ontology = pvn} = TripleToRdf, Context) ->
-    rdf_pvn:triple_to_rdf(TripleToRdf, Context);
+observe_triple_to_rdf(#triple_to_rdf{ontology = pnv} = TripleToRdf, Context) ->
+    rdf_pnv:triple_to_rdf(TripleToRdf, Context);
 observe_triple_to_rdf(#triple_to_rdf{ontology = prov} = TripleToRdf, Context) ->
     rdf_prov:triple_to_rdf(TripleToRdf, Context);
 observe_triple_to_rdf(_TripleToRdf, _Context) ->
@@ -238,8 +238,8 @@ observe_expand_namespace(#expand_namespace{name = pico_org}, _Context) ->
     {<<"pico">>, rdf_pico_org:namespace_iri()};
 observe_expand_namespace(#expand_namespace{name = picot_org}, _Context) ->
     {<<"picot">>, rdf_pico_org:terms_namespace_iri()};
-observe_expand_namespace(#expand_namespace{name = pvn}, _Context) ->
-    {<<"pvn">>, rdf_pvn:namespace_iri()};
+observe_expand_namespace(#expand_namespace{name = pnv}, _Context) ->
+    {<<"pnv">>, rdf_pnv:namespace_iri()};
 observe_expand_namespace(#expand_namespace{name = prov}, _Context) ->
     {<<"prov">>, rdf_prov:namespace_iri()};
 observe_expand_namespace(#expand_namespace{}, _Context) ->

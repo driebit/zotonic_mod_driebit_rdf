@@ -4,7 +4,7 @@
 %% https://www.lodewijkpetram.nl/vocab/pnv/doc/ (aka https://w3id.org/pnv)
 %% @end
 
--module(rdf_pvn).
+-module(rdf_pnv).
 -author("Driebit <tech@driebit.nl>").
 
 -include_lib("zotonic_core/include/zotonic.hrl").
@@ -22,7 +22,7 @@
 
 -spec triple_to_rdf(#triple_to_rdf{}, z:context()) ->
     {ok, #rdf_triple{}} | {ok, list(#rdf_triple{})} | {error, term()} | undefined.
-triple_to_rdf(#triple_to_rdf{link_type = property, ontology = pvn} = TripleToRdf, Context) ->
+triple_to_rdf(#triple_to_rdf{link_type = property, ontology = pnv} = TripleToRdf, Context) ->
     property_to_rdf(
         TripleToRdf#triple_to_rdf.rsc_id,
         TripleToRdf#triple_to_rdf.category,
