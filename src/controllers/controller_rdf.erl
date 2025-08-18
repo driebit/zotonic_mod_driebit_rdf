@@ -96,7 +96,7 @@ process(_Method, _AcceptedCT, _ProvidedCT, Context) ->
 get_id(Context) ->
     z_convert:to_binary(get_argument(id, Context)).
 get_serialization(Context) ->
-    z_convert:to_atom(get_argument(serialization, Context)).
+    to_known_atom(get_argument(serialization, Context)).
 
 get_ontologies(Context) ->
     case lists:uniq(get_arguments(ontology, ontologies, Context)) of
@@ -118,14 +118,27 @@ get_arguments(ArgName, MultArgName, Context) ->
     ArgsCtx = case z_context:get(ArgName, Context) of
         undefined ->
             case z_context:get(MultArgName, Context) of
-                Values when is_list(Values) -> lists:map(fun z_convert:to_atom/1, Values);
+                Values when is_list(Values) -> lists:map(fun to_known_atom/1, Values);
                 _ -> []
             end;
         Value ->
-            [z_convert:to_atom(Value)]
+            [to_known_atom(Value)]
     end,
     ArgsQs = lists:map(
-        fun z_convert:to_atom/1,
+        fun to_known_atom/1,
         z_context:get_q_all(ArgName, Context)
     ),
     ArgsCtx ++ ArgsQs.
+
+% Note: this has similar logic to 'z_convert:to_atom', but only using existing atoms.
+% We do this to avoid potentially reaching Erlang's atoms' limit from converting the
+% (arbitrary!) amount of parameters, which woudld result in a DOS.
+% See also: https://www.erlang.org/doc/apps/erts/erlang.html#binary_to_existing_atom/2
+to_known_atom(Bin) when is_binary(Bin) ->
+    try binary_to_existing_atom(Bin) catch error:badarg -> undefined end;
+to_known_atom(String) when is_list(String) ->
+    to_known_atom(z_convert:to_binary(String));
+to_known_atom(Atom) when is_atom(Atom) ->
+    Atom;
+to_known_atom(_) ->
+    undefined.
