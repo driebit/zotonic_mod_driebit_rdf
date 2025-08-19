@@ -101,13 +101,12 @@ to_literal(Value, _Context) when is_binary(Value) ->
             % otherwise, encode it as a hex binary:
             to_literal(z_utils:hex_encode(Value), rdf_xsd:namespaced_iri(hexBinary), undefined)
     end;
+to_literal(Value, _Context) when is_boolean(Value) ->
+    to_literal(z_convert:to_binary(Value), rdf_xsd:namespaced_iri(boolean), undefined);
 to_literal(Value, Context) when is_atom(Value) ->
     to_literal(z_convert:to_binary(Value), Context);
 to_literal(Value, Context) when is_list(Value) ->
     to_literal(z_convert:to_binary(Value), Context);
-
-to_literal(Value, _Context) when is_boolean(Value) ->
-    to_literal(z_convert:to_binary(Value), rdf_xsd:namespaced_iri(boolean), undefined);
 to_literal(Value, _Context) when is_float(Value) ->
     to_literal(z_convert:to_binary(Value), rdf_xsd:namespaced_iri(decimal), undefined);
 to_literal(Value, _Context) when is_integer(Value) ->
