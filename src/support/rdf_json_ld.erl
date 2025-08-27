@@ -108,19 +108,26 @@ namespaced(IRI, NamespaceMap) ->
 %% same key in lists.
 -spec merge_values(map(), map()) -> map().
 merge_values(Map, Acc) ->
-    maps:merge_with(
-        fun
-            (_Key, Val1, Val2) when Val1 =:= Val2 ->
-                Val1;
-            (_Key, Val1, Val2) when is_list(Val1) andalso is_list(Val2) ->
-                lists:uniq(Val1 ++ Val2);
-            (_Key, Val1, Val2) when is_list(Val1) ->
-                lists:uniq([Val2 | Val1]);
-            (_Key, Val1, Val2) when is_list(Val2) ->
-                lists:uniq([Val1 | Val2]);
-            (_Key, Val1, Val2) ->
-                [Val1, Val2]
-        end,
-        Map,
-        Acc
-    ).
+    maps:merge_with(fun merge_values_with/3, Map, Acc).
+
+
+merge_values_with(_Key, Val1, Val2) when Val1 =:= Val2 ->
+    Val1;
+merge_values_with(_Key, Val1, Val2) when is_list(Val1) andalso is_list(Val2) ->
+    lists:foldl(fun merge_value_into_list/2, Val1, Val2);
+merge_values_with(_Key, Val1, Val2) when is_list(Val1) ->
+    merge_value_into_list(Val2, Val1);
+merge_values_with(_Key, Val1, Val2) when is_list(Val2) ->
+    merge_value_into_list(Val1, Val2);
+merge_values_with(_Key, Val1, Val2) ->
+    merge_value_into_list(Val1, [Val2]).
+
+merge_value_into_list(Elem, []) ->
+    [Elem];
+merge_value_into_list(Elem, [Elem | Rest]) ->
+    [Elem | Rest];
+merge_value_into_list(#{<<"@id">> := SameId} = Elem, [#{<<"@id">> := SameId} = Head | Rest]) ->
+    [merge_values(Elem, Head) | Rest];
+merge_value_into_list(Elem, [Head | Rest]) ->
+    [Head | merge_value_into_list(Elem, Rest)].
+
