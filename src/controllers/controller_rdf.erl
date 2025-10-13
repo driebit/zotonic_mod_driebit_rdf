@@ -19,13 +19,13 @@
 
 resource_exists(Context) ->
     ContextQs = z_context:ensure_qs(Context),
-    Id = get_id(ContextQs),
-    {m_rsc:exists(Id, ContextQs), ContextQs}.
+    Ids = get_ids(ContextQs),
+    {lists:all(fun(Id) -> m_rsc:exists(Id, ContextQs) end, Ids), ContextQs}.
 
 forbidden(Context) ->
     ContextQs = z_context:ensure_qs(Context),
-    Id = get_id(ContextQs),
-    {not z_acl:rsc_visible(Id, ContextQs), ContextQs}.
+    Ids = get_ids(ContextQs),
+    {lists:any(fun(Id) -> not z_acl:rsc_visible(Id, ContextQs) end, Ids), ContextQs}.
 
 service_available(Context) ->
     ContextQs = z_context:ensure_qs(Context),
@@ -35,10 +35,10 @@ service_available(Context) ->
     ContextCh = z_context:set_cors_headers([{<<"access-control-allow-origin">>, <<"*">>}], ContextQs),
     z_context:logger_md(ContextCh),
     % The 'id' and 'serialization' arguments are required:
-    Id = get_id(ContextCh),
+    Ids = get_ids(ContextCh),
     Serialization = get_serialization(ContextCh),
     if
-        Id =:= undefined ->
+        Ids =:= [] ->
             ?LOG_WARNING(#{
                 text => <<"missing necessary parameter: id">>,
                 in => controller_rdf,
@@ -74,18 +74,18 @@ content_types_provided(Context) ->
 
 process(_Method, _AcceptedCT, _ProvidedCT, Context) ->
     ContextQs = z_context:ensure_qs(Context),
-    RscId = m_rsc:rid(get_id(ContextQs), ContextQs),
+    RscIds = lists:map(fun(RscId) -> m_rsc:rid(RscId, ContextQs) end, get_ids(ContextQs)),
     Ontologies = get_ontologies(ContextQs),
     Serialization = get_serialization(ContextQs),
     Namespaces = get_namespaces(Context),
-    case mod_driebit_rdf:rsc_to_rdf(RscId, Ontologies, Serialization, Namespaces, ContextQs) of
+    case mod_driebit_rdf:rsc_to_rdf(RscIds, Ontologies, Serialization, Namespaces, ContextQs) of
         {ok, Result} when is_binary(Result) ->
             {Result, ContextQs};
         Error ->
             ?LOG_ERROR(#{
                 text => <<"unexpected conversion error">>,
                 in => controller_rdf,
-                rsc_id => RscId,
+                rsc_ids => RscIds,
                 ontology => Ontologies,
                 serialization => Serialization,
                 message => Error
@@ -93,42 +93,39 @@ process(_Method, _AcceptedCT, _ProvidedCT, Context) ->
             {{halt, 500}, ContextQs}
     end.
 
-get_id(Context) ->
-    z_convert:to_binary(get_argument(id, Context)).
+get_ids(Context) ->
+    get_arguments(id, ids, fun z_convert:to_binary/1, Context).
+
 get_serialization(Context) ->
-    to_known_atom(get_argument(serialization, Context)).
+    Serialization = case z_context:get(serialization, Context) of
+        undefined -> z_context:get_q(serialization, Context);
+        Value -> Value
+    end,
+    to_known_atom(Serialization).
 
 get_ontologies(Context) ->
-    case lists:uniq(get_arguments(ontology, ontologies, Context)) of
+    case get_arguments(ontology, ontologies, fun to_known_atom/1, Context) of
         % when none is specified, default to the 'schema_org' ontology
         [] -> [schema_org];
         Ontologies -> Ontologies
     end.
 
 get_namespaces(Context) ->
-    get_arguments(namespace, namespaces, Context).
+    get_arguments(namespace, namespaces, fun to_known_atom/1, Context).
 
-get_argument(ArgName, Context) ->
-    case z_context:get(ArgName, Context) of
-        undefined -> z_context:get_q(ArgName, Context);
-        Value -> Value
-    end.
 
-get_arguments(ArgName, MultArgName, Context) ->
+get_arguments(ArgName, MultArgName, Conversion, Context) ->
     ArgsCtx = case z_context:get(ArgName, Context) of
         undefined ->
             case z_context:get(MultArgName, Context) of
-                Values when is_list(Values) -> lists:map(fun to_known_atom/1, Values);
+                Values when is_list(Values) -> Values;
                 _ -> []
             end;
         Value ->
-            [to_known_atom(Value)]
+            [Value]
     end,
-    ArgsQs = lists:map(
-        fun to_known_atom/1,
-        z_context:get_q_all(ArgName, Context)
-    ),
-    ArgsCtx ++ ArgsQs.
+    ArgsQs = z_context:get_q_all(ArgName, Context),
+    lists:uniq(lists:map(Conversion, ArgsCtx ++ ArgsQs)).
 
 % Note: this has similar logic to 'z_convert:to_atom', but only using existing atoms.
 % We do this to avoid potentially reaching Erlang's atoms' limit from converting the
