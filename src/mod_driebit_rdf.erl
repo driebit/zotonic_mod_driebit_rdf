@@ -52,7 +52,7 @@ observe_serialization_content_type(#serialization_content_type{}, _Context) ->
     undefined.
 
 %% RDF representation of one or more resources, using the given
-%% ontologies, serialization and namespaces.
+%% ontologies and serialization, using the default namespaces.
 -spec rsc_to_rdf(list(m_rsc:resource_id()) | m_rsc:resource_id(), list(atom()) | atom(), atom(), #context{}) -> {ok, binary()} | {error, term()}.
 rsc_to_rdf(RscIds, Ontology, Serialization, Context) ->
     rsc_to_rdf(RscIds, Ontology, Serialization, [], Context).
