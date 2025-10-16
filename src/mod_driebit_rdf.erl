@@ -51,18 +51,49 @@ observe_serialization_content_type(#serialization_content_type{serialization = j
 observe_serialization_content_type(#serialization_content_type{}, _Context) ->
     undefined.
 
-% RDF representation of a resource using the given ontologies and serialization.
--spec rsc_to_rdf(m_rsc:resource_id(), list(atom()) | atom(), atom(), #context{}) -> {ok, binary()} | {error, term()}.
-rsc_to_rdf(RscId, Ontology, Serialization, Context) ->
-    rsc_to_rdf(RscId, Ontology, Serialization, [], Context).
+%% RDF representation of one or more resources, using the given
+%% ontologies and serialization, using the default namespaces.
+-spec rsc_to_rdf(list(m_rsc:resource_id()) | m_rsc:resource_id(), list(atom()) | atom(), atom(), #context{}) -> {ok, binary()} | {error, term()}.
+rsc_to_rdf(RscIds, Ontology, Serialization, Context) ->
+    rsc_to_rdf(RscIds, Ontology, Serialization, [], Context).
 
-% RDF representation of a resource using the given ontologies, serialization and namespaces.
--spec rsc_to_rdf(m_rsc:resource_id(), list(atom()) | atom(), atom(), list(atom()), #context{}) -> {ok, binary()} | {error, term()}.
-rsc_to_rdf(RscId, Ontology, Serialization, Namespaces, Context) when is_atom(Ontology) ->
-    rsc_to_rdf(RscId, [Ontology], Serialization, Namespaces, Context);
-rsc_to_rdf(RscId, Ontologies, Serialization, Namespaces, Context) when is_list(Ontologies) ->
-    % First build an RDF graph with a 'rsc_to_rdf_graph' notification per ontology
+%% RDF representation of one or more resources, using the given
+%% ontologies, serialization and namespaces.
+-spec rsc_to_rdf(list(m_rsc:resource_id()) | m_rsc:resource_id(), list(atom()) | atom(), atom(), list(atom()), #context{}) -> {ok, binary()} | {error, term()}.
+rsc_to_rdf(RscIds, Ontologies, Serialization, Namespaces, Context) when is_list(RscIds) ->
+    % First build an RDF graph with 'rsc_to_rdf_graph' notifications
     RdfGraphResult = lists:foldl(
+        fun
+            (_RscId, {error, _Reason} = Error) ->
+                Error;
+            (RscId, {ok, AccRdfGraph}) ->
+                case rsc_to_rdf_graph(RscId, Ontologies, Context) of
+                    {ok, RscIdGraph} ->
+                        {ok, sets:union(AccRdfGraph, RscIdGraph)};
+                    Error ->
+                        Error
+                end
+        end,
+        {ok, sets:new()},
+        RscIds
+    ),
+    % then, if you have a graph, serialize it:
+    case RdfGraphResult of
+        {error, Reason} ->
+            {error, Reason};
+        {ok, RdfGraph} ->
+            serialize_rdf(RdfGraph, Serialization, Namespaces, Context)
+    end;
+rsc_to_rdf(RscId, Ontologies, Serialization, Namespaces, Context) ->
+    rsc_to_rdf([RscId], Ontologies, Serialization, Namespaces, Context).
+
+%% Build an RDF graph from a resource with a 'rsc_to_rdf_graph' notification per ontology
+-spec rsc_to_rdf_graph(m_rsc:resource_id(), list(atom()) | atom(), #context{}) -> {ok, binary()} | {error, term()}.
+rsc_to_rdf_graph(RscId, Ontology, Context) when is_atom(Ontology) ->
+    rsc_to_rdf_graph(RscId, [Ontology], Context);
+rsc_to_rdf_graph(RscId, Ontologies, Context) when is_list(Ontologies) ->
+    % First build an RDF graph with a 'rsc_to_rdf_graph' notification per ontology
+    lists:foldl(
         fun
             (_Ontology, {error, _Reason} = Error) ->
                 Error;
@@ -83,14 +114,7 @@ rsc_to_rdf(RscId, Ontologies, Serialization, Namespaces, Context) when is_list(O
         end,
         {ok, sets:new()},
         Ontologies
-    ),
-    % then, if you have a graph, serialize it:
-    case RdfGraphResult of
-        {error, Reason} ->
-            {error, Reason};
-        {ok, RdfGraph} ->
-            serialize_rdf(RdfGraph, Serialization, Namespaces, Context)
-    end.
+    ).
 
 % Representation of an RDF graph using the given serialization and namespaces.
 -spec serialize_rdf(rdf_graph(), atom(), map() | list(), #context{}) -> {ok, binary()} | {error, term()}.

@@ -31,7 +31,7 @@ graph_to_jsonld(RdfGraph, NamespaceMap) ->
     sets:fold(
         fun(Triple, Result) ->
             TripleResult = triple_to_jsonld(Triple, NamespaceMap),
-            merge_values(TripleResult, Result)
+            merge_graph_values(TripleResult, Result)
         end,
         map_with_context(NamespaceMap),
         RdfGraph
@@ -103,6 +103,33 @@ namespaced(IRI, NamespaceMap) ->
         undefined -> IRI;
         PrefixedIRI -> PrefixedIRI
     end.
+
+%% @doc Like 'merge_values', but for the whole graph.
+%% The difference is that this will put triples of different subjects
+%% under the (default) '@graph' key, but only if necessary.
+%% See also: https://www.w3.org/TR/json-ld11/#named-graphs
+-spec merge_graph_values(map(), map()) -> map().
+merge_graph_values(Map, #{<<"@graph">> := GraphList} = Acc) ->
+    % accumulator already has a "@graph" key: add new values to it:
+    maps:put(
+        <<"@graph">>,
+        merge_values_with(<<"@graph">>, Map, GraphList),
+        Acc
+    );
+merge_graph_values(#{<<"@id">> := NewId} = Map, #{<<"@id">> := GraphId} = Acc) when NewId =/= GraphId ->
+    % accumulator already has an "@id" key that doesn't match the new value's:
+    % extract the "@context" (if any) and add a "@graph" key to the accumulator:
+    ContextMap = case maps:get(<<"@context">>, Acc, undefined) of
+        undefined -> #{};
+        GraphContext -> #{<<"@context">> => GraphContext}
+    end,
+    ExistingGraph = maps:remove(<<"@context">>, Acc),
+    NewAcc = maps:put(<<"@graph">>, [ExistingGraph], ContextMap),
+    merge_graph_values(Map, NewAcc);
+merge_graph_values(Map, Acc) ->
+    % accumulator either has the same "@id" or none: merge values normally
+    merge_values(Map, Acc).
+
 
 %% @doc Merge a map into an accumulator map, combining multiple values for the
 %% same key in lists.

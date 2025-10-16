@@ -36,12 +36,13 @@ namespaces (see below), whose result can be obtained with the generic endpoints:
 curl -L http://yoursite.com/rdf/<ser>/<ont>/<id>?namespace=<ns>
 curl -L http://yoursite.com/rdf/<ser>/<id>?ontology=<ont>&namespace=<ns>
 curl -L http://yoursite.com/rdf/<id>?ontology=<ont>&serialization=<ser>&namespace=<ns>
+curl -L http://yoursite.com/rdf?id=<id>&ontology=<ont>&serialization=<ser>&namespace=<ns>
 ```
 where:
 1. `<ser>`, `<ont>` and `<ns>` are the name of the serialization, ontology and
   namespace used, respectively;
-2. the `?ontology` and `?namespace` query parameter can be specified multiple
-  times.
+2. the `?ontology`, `?namespace` and `?id` query parameters can be specified
+  multiple times.
 
 #### Export rules
 

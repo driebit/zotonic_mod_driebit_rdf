@@ -10,6 +10,9 @@
   % Generic endpoint for a 'serialization' and (possibly multiple) 'ontology' as query arguments
   {rdf_any, ["rdf", serialization, id], controller_rdf, []},
 
-  % Generic endpoint for a 'serialization' and (possibly multiple) 'ontology' as query arguments
-  {rdf_any, ["rdf", id], controller_rdf, []}
+  % Generic endpoint for an ID, requiring serialization as query argument
+  {rdf_any, ["rdf", id], controller_rdf, []},
+
+  % Generic endpoint, requiring serialization and (at least) one 'id' as query arguments
+  {rdf_any, ["rdf"], controller_rdf, []}
 ].
