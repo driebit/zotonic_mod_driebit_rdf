@@ -66,7 +66,7 @@ resolve_iri(Rsc, Context) ->
         undefined ->
             blank;
         RscId ->
-            case m_rsc:uri(RscId, Context) of
+            case z_dispatcher:url_for(id, [{id, RscId}, {absolute_url, true}], Context) of
                 undefined -> blank;
                 URI when is_binary(URI) -> URI
             end
